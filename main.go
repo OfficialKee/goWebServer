@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	
 )
 
@@ -33,6 +34,7 @@ func main() {
 	// router.HandleFunc("POST /api/validate_chirp",unMarshalChirp)
 	router.HandleFunc("POST /api/chirps",cfg.postChirpHandler)
 	router.HandleFunc("GET /api/chirps",cfg.getChirpsHandler)
+	router.HandleFunc("GET /api/chirps/{id}",cfg.getChirpHandler)
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
@@ -195,6 +197,28 @@ func (cfg *ApiConfig)getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	respBody := cfg.dataBase
 	data,err := json.Marshal(&respBody)
 
+	if err!= nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(`{"error": "Something went wrong"}`))
+        return
+    }
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(data))
+}
+
+func (cfg *ApiConfig)getChirpHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	nint,err := strconv.Atoi(id)
+	if err!= nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(`{"error": "Something went wrong"}`))
+        return
+    }
+	fmt.Printf(cfg.dataBase.Chirps[nint].Body)
+	respBody := cfg.dataBase.Chirps[nint]
+
+	data,err := json.Marshal(&respBody)
 	if err!= nil {
         w.Header().Set("Content-Type", "application/json")
         w.Write([]byte(`{"error": "Something went wrong"}`))
