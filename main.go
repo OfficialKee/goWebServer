@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
+	// "regexp"
 	"strconv"
-	
+	"githhub.com/officialkee/goWebServer/chirps"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	// endoint to reset the number of hits to the server
 	router.HandleFunc("/api/reset", cfg.reset)
 	// serve on port 8080 using the multiplexer
-	// router.HandleFunc("POST /api/validate_chirp",unMarshalChirp)
+	router.HandleFunc("POST /api/validate_chirp",chirps.unMarshalChirp)
 	router.HandleFunc("POST /api/chirps",cfg.postChirpHandler)
 	router.HandleFunc("GET /api/chirps",cfg.getChirpsHandler)
 	router.HandleFunc("GET /api/chirps/{id}",cfg.getChirpHandler)
@@ -46,50 +46,50 @@ func main() {
 
 }
 // unmarshalChirp is a function to unMarshal the json  chirp from the client and validate
-func unMarshalChirp(w http.ResponseWriter, r *http.Request) {
-	// create a struct to hold the json data from the client
-	type  parameters struct {
-		Body string `json:"body"`	
-	}
-	// decode the json data from the client into the struct
-	body := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := body.Decode(&params)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-        w.Write([]byte(`{"error": "Something went wrong"}`))
-        return
-	}
-	if len(params.Body) > 140   {	
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-        w.Write([]byte(`{"error": "Chirp is too long"}`))
-        return
-	}
+// func unMarshalChirp(w http.ResponseWriter, r *http.Request) {
+// 	// create a struct to hold the json data from the client
+// 	type  parameters struct {
+// 		Body string `json:"body"`	
+// 	}
+// 	// decode the json data from the client into the struct
+// 	body := json.NewDecoder(r.Body)
+// 	params := parameters{}
+// 	err := body.Decode(&params)
+// 	if err != nil {
+// 		w.Header().Set("Content-Type", "application/json")
+//         w.Write([]byte(`{"error": "Something went wrong"}`))
+//         return
+// 	}
+// 	if len(params.Body) > 140   {	
+// 		w.Header().Set("Content-Type", "application/json")
+// 		w.WriteHeader(http.StatusBadRequest)
+//         w.Write([]byte(`{"error": "Chirp is too long"}`))
+//         return
+// 	}
 	
-	re,_ := regexp.Compile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
-	fixed := re.ReplaceAllString(params.Body, "****")
-	type returnVal struct {
-		UniqueId int `json:"unique_id"`
-		Cleaned_body string `json:"cleaned_body"`
-	}
+// 	re,_ := regexp.Compile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
+// 	fixed := re.ReplaceAllString(params.Body, "****")
+// 	type returnVal struct {
+// 		UniqueId int `json:"unique_id"`
+// 		Cleaned_body string `json:"cleaned_body"`
+// 	}
 	
-	respBody := returnVal{
-		UniqueId: 1,
-		Cleaned_body: fixed,
-	}
+// 	respBody := returnVal{
+// 		UniqueId: 1,
+// 		Cleaned_body: fixed,
+// 	}
 
-	data,err := json.Marshal(&respBody)
-	if err!= nil {
-        w.Header().Set("Content-Type", "application/json")
-        w.Write([]byte(`{"error": "Something went wrong"}`))
-        return
-    }
+// 	data,err := json.Marshal(&respBody)
+// 	if err!= nil {
+//         w.Header().Set("Content-Type", "application/json")
+//         w.Write([]byte(`{"error": "Something went wrong"}`))
+//         return
+//     }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(data))
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.Write([]byte(data))
 	
-}
+// }
 
 // function to write the readiness response to the client // or return whatevr is decided from the function
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +215,7 @@ func (cfg *ApiConfig)getChirpHandler(w http.ResponseWriter, r *http.Request) {
         w.Write([]byte(`{"error": "Something went wrong"}`))
         return
     }
-	fmt.Printf(cfg.dataBase.Chirps[nint].Body)
+	// fmt.Printf(cfg.dataBase.Chirps[nint].Body)
 	respBody := cfg.dataBase.Chirps[nint]
 
 	data,err := json.Marshal(&respBody)
