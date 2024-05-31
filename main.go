@@ -6,16 +6,17 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	
 )
 
 func main() {
 	
 	// choose port to serve on
 	const port = "8080"
-	cfg := apiConfig{
+	cfg := ApiConfig{
 		fileServerHits: 0,
-		dataBase:       *db,
 	}
+	
 	
 	// new multiplexer to serve static files
 	router := http.NewServeMux()
@@ -30,7 +31,8 @@ func main() {
 	router.HandleFunc("/api/reset", cfg.reset)
 	// serve on port 8080 using the multiplexer
 	// router.HandleFunc("POST /api/validate_chirp",unMarshalChirp)
-	router.HandleFunc("POST /api/chirps",unMarshalChirp)
+	router.HandleFunc("POST /api/chirps",cfg.postChirpHandler)
+	router.HandleFunc("GET /api/chirps",cfg.getChirpsHandler)
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
@@ -93,14 +95,14 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
-func (cfg *apiConfig) numberOfRequests(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) numberOfRequests(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %d times!</p></body></html>", cfg.fileServerHits)))
 }
 
 // middle ware method to increment the number of hits to the server
-func (cfg *apiConfig) middleWareMetricsInc(next http.Handler) http.Handler {
+func (cfg *ApiConfig) middleWareMetricsInc(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.fileServerHits++
@@ -110,7 +112,7 @@ func (cfg *apiConfig) middleWareMetricsInc(next http.Handler) http.Handler {
 }
 
 // middle ware method to reset the number of hits to the server
-func (cfg *apiConfig) reset(w http.ResponseWriter, r *http.Request) {
+func (cfg *ApiConfig) reset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0"))
 	cfg.fileServerHits = 0
@@ -118,8 +120,87 @@ func (cfg *apiConfig) reset(w http.ResponseWriter, r *http.Request) {
 }
 
 // stateful struct to hold the number of hits to the server
-type apiConfig struct {
+type ApiConfig struct {
 	fileServerHits int
-	dataBase                                                            
+	dataBase  DataBase                                            
 }
 
+
+type chirp struct {
+	Id int `json:"id"`
+	Body string `json:"body"`
+}
+
+type DataBase struct {
+	Chirps  map[int]chirp `json:"chirps"`
+}
+
+var Db = DataBase{
+    Chirps: make(map[int]chirp),
+}
+
+
+ 
+
+func (cfg *ApiConfig) postChirpHandler(w http.ResponseWriter, r *http.Request) {
+	// create a struct to hold the json data from the client
+    // type  parameters struct {
+    //     Body string `json:"body"`    
+    // }
+    // decode the json data from the client into the struct
+    body := json.NewDecoder(r.Body)
+    params := chirp{}
+    err := body.Decode(&params)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(`{"error": "Something went wrong"}`))
+        return
+    }
+    if len(params.Body) > 140   {    
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(`{"error": "Chirp is too long"}`))
+        return
+    }
+	if len(cfg.dataBase.Chirps) > 0 {
+		params.Id = len(cfg.dataBase.Chirps) + 1
+		cfg.dataBase.Chirps[params.Id] = params
+		fmt.Println(cfg.dataBase)
+	}
+	if len(cfg.dataBase.Chirps)== 0 {
+		params.Id = 1
+		cfg.dataBase = Db
+		cfg.dataBase.Chirps[1] = params
+		
+		fmt.Println(cfg.dataBase)
+	}
+	
+    respBody := params
+
+	data,err := json.Marshal(&respBody)
+
+	if err!= nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(`{"error": "Something went wrong"}`))
+        return
+    }
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(data))
+
+}
+
+func (cfg *ApiConfig)getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+
+	respBody := cfg.dataBase
+	data,err := json.Marshal(&respBody)
+
+	if err!= nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(`{"error": "Something went wrong"}`))
+        return
+    }
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(data))
+}
